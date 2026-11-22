@@ -29,6 +29,7 @@ final class AppState: ObservableObject {
         Prefs.register()
         refreshRecent()
         unfinished = WorkSession.loadAll()
+        UpdateChecker.shared.start()
         Task.detached { CallStore.applyRetention() }
         Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.checkInbox() }

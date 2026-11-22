@@ -2,6 +2,11 @@
 # Builds CallNotes.app and installs it in /Applications.
 # Signs with a "Developer ID Application" certificate if this Mac has one
 # (hardened runtime + mic entitlement), else the local self-signed cert, else ad-hoc.
+#   ./build.sh            dev build, installed in /Applications
+#   ./build.sh --zip      … plus build/CallNotes-<v>.zip
+#   ./build.sh --release  Developer ID only: notarize + staple + Gatekeeper check,
+#                         then build/CallNotes-<v>.zip AND build/CallNotes.zip
+#                         (notarytool profile "peripheralspeed-notary", override NOTARY_PROFILE=…)
 set -e
 cd "${0:A:h}"
 VERSION=$(grep 'static let version' Sources/CallNotes/Version.swift | sed 's/.*"\(.*\)".*/\1/')
@@ -60,11 +65,24 @@ else
   fi
 fi
 
+if [ "$1" = "--release" ]; then
+  [ -n "$IDENTITY" ] || { echo "error: a release needs the Developer ID certificate (Chris's M1 Mac mini)" >&2; exit 1; }
+  PROFILE="${NOTARY_PROFILE:-peripheralspeed-notary}"
+  echo "submitting to Apple notary service…"
+  ditto -c -k --keepParent "$APP" "$T/notarize.zip"
+  xcrun notarytool submit "$T/notarize.zip" --keychain-profile "$PROFILE" --wait | tee "$T/notary.log"
+  grep -q "status: Accepted" "$T/notary.log" || { echo "error: notarization was not accepted" >&2; exit 1; }
+  xcrun stapler staple "$APP"
+  spctl -a -vv "$APP" 2>&1 | grep -q "Notarized Developer ID" || { echo "error: Gatekeeper would block this build" >&2; exit 1; }
+  echo "notarized and stapled."
+fi
+
 osascript -e 'tell application "CallNotes" to quit' >/dev/null 2>&1 || true
 rm -rf /Applications/CallNotes.app
 ditto "$APP" /Applications/CallNotes.app
-if [ "$1" = "--zip" ]; then
+if [ "$1" = "--zip" ] || [ "$1" = "--release" ]; then
   mkdir -p build && ditto -c -k --keepParent "$APP" "build/CallNotes-$VERSION.zip" && echo "wrote build/CallNotes-$VERSION.zip"
+  [ "$1" = "--release" ] && cp "build/CallNotes-$VERSION.zip" build/CallNotes.zip && echo "wrote build/CallNotes.zip"
 fi
 rm -rf "$T"
 echo "Installed /Applications/CallNotes.app (v$VERSION)"

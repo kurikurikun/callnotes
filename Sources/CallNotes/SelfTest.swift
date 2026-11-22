@@ -8,6 +8,11 @@ import AppKit
 enum SelfTest {
     static func runIfRequested() {
         let args = CommandLine.arguments
+        if args.contains("--install-update") {
+            // dev/test hook: run the full self-update synchronously
+            if let err = UpdateChecker.performUpdate() { print("update failed: \(err)"); exit(1) }
+            print("update installed, new version launched"); exit(0)
+        }
         if let i = args.firstIndex(of: "--import"), args.count > i + 1 {
             // Imports one recording like the inbox does (moves it) and prints the transcript.
             Prefs.register()

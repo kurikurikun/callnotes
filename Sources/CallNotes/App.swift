@@ -139,6 +139,7 @@ struct MenuLabel: View {
 
 struct MenuContent: View {
     @EnvironmentObject var state: AppState
+    @ObservedObject private var updates = UpdateChecker.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -208,7 +209,26 @@ struct MenuContent: View {
         Button("Settings…") { show("settings") }
             .keyboardShortcut(",")
         Button("Welcome & permissions…") { show("welcome") }
+        if let latest = updates.latest {
+            Divider()
+            if updates.updating {
+                Text("Updating — CallNotes will relaunch itself…")
+            } else {
+                Button("v\(latest.version) is out — update now") { updates.installUpdate() }
+                    .disabled(state.mode != .idle || state.jobStatus != nil)
+                if state.mode != .idle || state.jobStatus != nil {
+                    Text("Update after this call finishes")
+                }
+                if let err = updates.updateError {
+                    Text(err)
+                    Button("Download manually…") {
+                        if let u = URL(string: latest.url) { NSWorkspace.shared.open(u) }
+                    }
+                }
+            }
+        }
         Divider()
+        Text("CallNotes v\(AppInfo.version)")
         Button("Quit CallNotes") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }

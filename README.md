@@ -5,6 +5,8 @@ Menu-bar app for move-ment: records any online call (Meet, Teams, Zoom, anything
 ## Build
 
 - `./build.sh` – builds, signs (see Signing) and installs `/Applications/CallNotes.app`. `./build.sh --zip` also writes `build/CallNotes-<v>.zip`.
+- `./release.sh 0.3 "what changed"` – notarized GitHub release (Developer ID Mac only). Installed copies see it in the menu and update themselves.
+- Download: https://github.com/kurikurikun/callnotes/releases/latest
 - Needs macOS 15+, Apple Silicon, Xcode (SwiftPM pulls WhisperKit 1.1.1).
 - Signing: Developer ID if present; otherwise the self-signed "CallNotes Local Signing" cert in the login keychain (made Nov 2026, 10 years), which keeps the app identity stable so macOS keeps its permissions across rebuilds. With neither, ad-hoc signing and permissions are re-asked every build.
 - Self-test (no call needed): `CallNotes --selftest ours.aiff theirs.aiff -outputFolder /tmp/x` fakes a crashed two-track recording with speaker echo, then runs recovery → .m4a → transcription → merge and prints `transcript.md`.
